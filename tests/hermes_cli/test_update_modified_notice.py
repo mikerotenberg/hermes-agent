@@ -44,7 +44,8 @@ def test_update_reports_retained_copies_that_no_longer_receive_bundled_updates(t
     monkeypatch.setenv("HERMES_HOME", str(home))
     monkeypatch.setattr(skills_sync, "_get_bundled_dir", lambda: bundled)
     monkeypatch.setattr(skills_sync, "_get_optional_dir", lambda: optional)
-    for name in ("optional-local-edit", "optional-pristine", "dropped-local", "dropped-archived", "still-bundled"):
+    for name in ("optional-local-edit", "optional-pristine", "optional-stale", "dropped-local", "dropped-archived",
+                 "still-bundled"):
         source = bundled / name / "SKILL.md"
         source.parent.mkdir(parents=True)
         source.write_text(f"---\nname: {name}\ndescription: fixture\n---\nOriginal\n", encoding="utf-8")
@@ -56,8 +57,11 @@ def test_update_reports_retained_copies_that_no_longer_receive_bundled_updates(t
     archive = installed / ".archive"
     archive.mkdir()
     (installed / "dropped-archived").rename(archive / "dropped-archived")
-    for name in ("optional-local-edit", "optional-pristine"):
+    for name in ("optional-local-edit", "optional-pristine", "optional-stale"):
         (bundled / name).rename(optional / name)
+    # Upstream changed this skill after the copy was installed; the copy itself is unedited.
+    stale_source = optional / "optional-stale" / "SKILL.md"
+    stale_source.write_text(stale_source.read_text(encoding="utf-8") + "Upstream change\n", encoding="utf-8")
     for name in ("dropped-local", "dropped-archived"):
         (bundled / name).rename(tmp_path / name)
     manifest = installed / ".bundled_manifest"
@@ -65,7 +69,7 @@ def test_update_reports_retained_copies_that_no_longer_receive_bundled_updates(t
 
     _print_bundled_skills_sync_report()
     out = capsys.readouterr().out
-    assert "1 moved to optional, local copy kept (no bundled updates): optional-local-edit" in out
+    assert "2 moved to optional, local copy kept (no bundled updates): optional-local-edit, optional-stale" in out
     assert "#skills-that-leave-the-bundle" in out
     # The fix depends on the profile and on Hub installs, so the notice names no mutating command.
     assert "repair-official" not in out
@@ -73,10 +77,11 @@ def test_update_reports_retained_copies_that_no_longer_receive_bundled_updates(t
     assert "Skills are up to date" not in out
     for name in ("optional-pristine", "still-bundled", "dropped-archived"):
         assert name not in out
-    # The unedited optional copy is adopted by the official-provenance backfill, so it is Hub-managed.
+    # Only a copy byte-identical to the current optional source is adopted by the official-provenance
+    # backfill (Hub-managed, not listed); an unedited copy older than that source is still listed.
     assert skills_sync._read_hub_install_paths() == {"optional-pristine"}
     profile_status = _profile_skill_sync_status(skills_sync.sync_skills(quiet=True))
-    assert "!1 moved to optional" in profile_status and "!1 removed from the bundle" in profile_status
+    assert "!2 moved to optional" in profile_status and "!1 removed from the bundle" in profile_status
     assert edited.read_text(encoding="utf-8").endswith("Local edits\n")
     assert (installed / "dropped-local" / "SKILL.md").is_file()
     assert (archive / "dropped-archived" / "SKILL.md").is_file()
