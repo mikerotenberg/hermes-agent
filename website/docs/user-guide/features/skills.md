@@ -1117,7 +1117,7 @@ Run these commands in the profile the notice came from. `-p` applies only to the
 
 **Removed from the bundle.** The copy keeps working. Delete its folder from the profile's `skills/` directory when you no longer need it. Once no active or archived copy with that name remains, the next sync drops its manifest entry.
 
-**Moved to optional.** A copy is listed here unless it is byte-identical to the current official version, so the list can include unedited copies that predate later upstream changes, not only edited ones. `hermes skills repair-official <name> --restore` switches to the official version. It takes the official skill's name or folder name; if the name in the notice isn't found, the skill was renamed when it moved, so use its folder name.
+**Moved to optional.** The list can include copies you never edited, for example when your installed copy predates later changes to the official optional version. `hermes skills repair-official <name> --restore` switches to the official version. It takes the official skill's name or folder name; if the name in the notice isn't found, the skill was renamed when it moved, so use its folder name.
 
 Check before running it: `--restore` moves into `skills/.restore-backups/` every active skill whose folder name matches the official skill's folder name, or whose `name:` matches the official skill's name or folder name, plus any copy at the official skill's install path that differs from the official version. That includes Skills Hub installs, whose lock entries can be left pointing at a missing folder or at replaced content. If any of those copies came from the Skills Hub, don't use `--restore`.
 
